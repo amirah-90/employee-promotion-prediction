@@ -1,4 +1,9 @@
 """Automated tests for validate_data.py, run by pytest in the CI/CD pipeline."""
+import sys
+import os
+# add the repo root (the folder above tests/) so Python can import validate_data
+sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
+
 import numpy as np
 import pandas as pd
 from validate_data import check_missing, check_duplicates, check_target, check_ranges, validate

@@ -2,4 +2,3 @@ __pycache__/
 .ipynb_checkpoints/
 *.pyc
 .pytest_cache/
-data/employee_promotion_prediction.csv
