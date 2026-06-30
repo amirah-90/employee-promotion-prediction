@@ -2,13 +2,14 @@ import streamlit as st
 import pandas as pd
 import matplotlib.pyplot as plt
 from pathlib import Path
+from sklearn.model_selection import train_test_split
 from sklearn.linear_model import LogisticRegression
+from sklearn.metrics import recall_score
 
 st.set_page_config(page_title="Employee Promotion Dashboard", layout="wide")
 st.title("Employee Promotion Prediction Dashboard")
-st.write("Explore employee data and predict promotion likelihood.")
+st.write("Explore employee data, predict promotion likelihood, and monitor the model.")
 
-# absolute path for deployment reliability (same approach as Practical 5.3)
 BASE_DIR = Path(__file__).resolve().parent.parent
 data_path = BASE_DIR / "data" / "dashboard_data.csv"
 
@@ -17,19 +18,41 @@ def load_data():
     return pd.read_csv(data_path)
 
 df = load_data()
+feats = ["performance_score", "kpi_achievement_percent", "manager_rating",
+         "tasks_completed", "years_at_company"]
 
-# ---------- Interactive filters (Q4a-ii) ----------
+@st.cache_resource
+def train_model(data):
+    Xtr, Xte, ytr, yte = train_test_split(data[feats], data["promoted"], test_size=0.2,
+                                          random_state=42, stratify=data["promoted"])
+    model = LogisticRegression(max_iter=1000, class_weight="balanced").fit(Xtr, ytr)
+    rec = recall_score(yte, model.predict(Xte))
+    return model, rec
+
+model, model_recall = train_model(df)
+
+# ---------- Monitoring Overview (Q5a) ----------
+st.header("Monitoring Overview")
+m1, m2, m3 = st.columns(3)
+m1.metric("Records Monitored", f"{len(df):,}")
+m1.caption("Operational: number of records the dashboard is serving.")
+m2.metric("Current Promotion Rate", f"{df['promoted'].mean()*100:.1f}%")
+m2.caption("Business: share of employees promoted (watch for sudden changes).")
+m3.metric("Model Recall", f"{model_recall:.2f}")
+m3.caption("Model performance: share of real promotions the model catches.")
+st.divider()
+
+# ---------- Filters ----------
 st.sidebar.header("Filter Options")
 dept = st.sidebar.selectbox("Select Department", ["All"] + sorted(df["department"].unique()))
 min_perf = st.sidebar.slider("Minimum Performance Score", 40, 100, 40)
-
 view = df.copy()
 if dept != "All":
     view = view[view["department"] == dept]
 view = view[view["performance_score"] >= min_perf]
 st.caption(f"Showing {len(view):,} employees")
 
-# ---------- Visualizations (Q4a-i) ----------
+# ---------- Visualizations ----------
 st.subheader("1. Promotion Rate by Department (%)")
 rate = view.groupby("department")["promoted"].mean().sort_values(ascending=False) * 100
 st.bar_chart(rate)
@@ -45,26 +68,14 @@ st.subheader("3. Promotion Outcome Counts")
 counts = view["promoted"].value_counts().rename({0: "Not Promoted", 1: "Promoted"})
 st.bar_chart(counts)
 
-# ---------- Predictive output (Q4a-iii) ----------
+# ---------- Prediction ----------
 st.subheader("4. Predict Promotion Likelihood")
-
-@st.cache_resource
-def train_model(data):
-    feats = ["performance_score", "kpi_achievement_percent", "manager_rating",
-             "tasks_completed", "years_at_company"]
-    model = LogisticRegression(max_iter=1000, class_weight="balanced")
-    model.fit(data[feats], data["promoted"])
-    return model, feats
-
-model, feats = train_model(df)
-
 c1, c2, c3 = st.columns(3)
 perf = c1.slider("Performance Score", 40, 100, 70)
 kpi = c2.slider("KPI Achievement %", 30, 100, 70)
 mgr = c3.slider("Manager Rating", 1.0, 5.0, 3.0, step=0.1)
 tasks = c1.slider("Tasks Completed", 0, 130, 35)
 years = c2.slider("Years at Company", 0, 30, 5)
-
 if st.button("Predict"):
     row = pd.DataFrame([[perf, kpi, mgr, tasks, years]], columns=feats)
     prob = model.predict_proba(row)[0][1]
