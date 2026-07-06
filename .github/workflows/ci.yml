@@ -26,5 +26,14 @@ jobs:
       - name: Run data validation
         run: python validate_data.py data/sample_employees.csv
 
+      - name: Train model and generate artefact
+        run: python src/train_model.py
+
+      - name: Check model artefact exists
+        run: test -f model/promotion_model.pkl
+
       - name: Run tests
         run: pytest tests/ -v
+
+      - name: Check dashboard compiles
+        run: python -m py_compile dashboard/app.py
