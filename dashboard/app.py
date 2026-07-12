@@ -34,7 +34,7 @@ m1.caption("Operational: number of records the dashboard is serving.")
 m2.metric("Current Promotion Rate", f"{df['promoted'].mean() * 100:.1f}%")
 m2.caption("Business: share of employees promoted (watch for sudden changes).")
 m3.metric("Model Recall", f"{bundle['full_model_recall']:.2f}")
-m3.caption("Model performance: recall of the evaluated full model (Q2/Q3).")
+m3.caption("Model performance: recall of the evaluated full model")
 
 # ---------- Interactive filters (Q4a-ii) ----------
 st.sidebar.header("Filter Options")
